@@ -6,7 +6,7 @@
 
 package lp1;
 
-import hxg200007.TestSP3;
+//import hxg200007.TestSP3;
 
 import java.util.Arrays;
 import java.util.Random;
