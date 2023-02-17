@@ -1,6 +1,15 @@
 package lp1;
 
 public class RMQHybridOne implements RMQStructure {
+    
+    protected int block_size;
+	protected int[] block_minima;
+	protected int[][] sparse_table;
+	
+	public RMQHybridOne() {
+		
+	}
+
     @Override
     public void preProcess(int[] arr) {
         int length = arr.length;
