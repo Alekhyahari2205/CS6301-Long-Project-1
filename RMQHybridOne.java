@@ -34,17 +34,36 @@ public class RMQHybridOne implements RMQStructure {
         if(i==j) {
 			return arr[i];
 		}
-		
-		int left_top_index = i/block_size + 1;
-		int right_top_index = j/block_size - 1;
+
+        int left_top_index = i/block_size;
+		int right_top_index = j/block_size;
+        int bottom_min = arr[i];
+        int bottom_left_min = arr[i];
+        int bottom_right_min = arr[j];
+
+        boolean flag = false;
 		
         // Getting bottom min
-        int bottom_min = getBottomMin(arr, i, j);
+        if(i%block_size != 0){
+            bottom_left_min = getLeftBottomMin(arr, i, j);
+            left_top_index += 1;
+            flag = true;
+        }
+
+        if(j%block_size != 0) {
+            bottom_right_min = getRightBottomMin(arr, i, j);
+            right_top_index -= 1;
+            flag = true;
+        }
+
+        if(flag) {
+            bottom_min = Math.min(bottom_left_min, bottom_right_min);
+        }
 
         if(left_top_index >= right_top_index) {
             return bottom_min;
         }
-
+        
         // Getting top min
 		int top_min = getTopMin(arr, left_top_index, right_top_index);
 
@@ -74,15 +93,20 @@ public class RMQHybridOne implements RMQStructure {
 		}
 	}
 
-    public int getBottomMin(int[] arr, int startIndex, int endIndex) {
+    public int getLeftBottomMin(int[] arr, int startIndex, int endIndex) {
         int endOfBlock = (int)(startIndex/block_size) * block_size + block_size;
-        int startOfBlock = (int)(endIndex/block_size) * block_size;
-
         int min_value = arr[startIndex];
 
         for(int i = startIndex; i < Math.min(endOfBlock, endIndex); i++) {
             min_value = Math.min(min_value, arr[i]);
         }
+
+        return min_value;
+    }
+
+    public int getRightBottomMin(int[] arr, int startIndex, int endIndex) {
+        int startOfBlock = (int)(endIndex/block_size) * block_size;
+        int min_value = arr[startOfBlock];
 
         for(int i = Math.min(startIndex, startOfBlock); i <  endIndex; i++) {
             min_value = Math.min(min_value, arr[i]);
@@ -97,7 +121,7 @@ public class RMQHybridOne implements RMQStructure {
         int left_min = sparse_table[startIndex][i];
         int right_min = sparse_table[(int)(endIndex - Math.pow(2, i) + 1)][i];
         
-        return min(left_min, right_min);
+        return Math.min(left_min, right_min);
     }
 	
 }
