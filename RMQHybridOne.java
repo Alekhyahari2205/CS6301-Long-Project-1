@@ -1,7 +1,7 @@
 package lp1;
 
 public class RMQHybridOne implements RMQStructure {
-    
+
     protected int block_size;
 	protected int[] block_minima;
 	protected int[][] sparse_table;
@@ -35,11 +35,20 @@ public class RMQHybridOne implements RMQStructure {
 			return arr[i];
 		}
 		
-		int left_top_index = i/block_size;
-		int right_top_index = j/block_size;
+		int left_top_index = i/block_size + 1;
+		int right_top_index = j/block_size - 1;
 		
-		
-		return 0;
+        // Getting bottom min
+        int bottom_min = getBottomMin(arr, i, j);
+
+        if(left_top_index >= right_top_index) {
+            return bottom_min;
+        }
+
+        // Getting top min
+		int top_min = getTopMin(arr, left_top_index, right_top_index);
+
+		return Math.min(top_min, bottom_min);
     }
 
     public void sparseTable(int[] arr, int arr_size) {
@@ -64,5 +73,31 @@ public class RMQHybridOne implements RMQStructure {
 			}
 		}
 	}
+
+    public int getBottomMin(int[] arr, int startIndex, int endIndex) {
+        int endOfBlock = (int)(startIndex/block_size) * block_size + block_size;
+        int startOfBlock = (int)(endIndex/block_size) * block_size;
+
+        int min_value = arr[startIndex];
+
+        for(int i = startIndex; i < Math.min(endOfBlock, endIndex); i++) {
+            min_value = Math.min(min_value, arr[i]);
+        }
+
+        for(int i = Math.min(startIndex, startOfBlock); i <  endIndex; i++) {
+            min_value = Math.min(min_value, arr[i]);
+        }
+
+        return min_value;
+    }
+
+    public int getTopMin(int[] arr, int startIndex, int endIndex) {
+        int i = (int)(Math.log(startIndex-endIndex+1)/Math.log(2));
+
+        int left_min = sparse_table[startIndex][i];
+        int right_min = sparse_table[(int)(endIndex - Math.pow(2, i) + 1)][i];
+        
+        return min(left_min, right_min);
+    }
 	
 }
