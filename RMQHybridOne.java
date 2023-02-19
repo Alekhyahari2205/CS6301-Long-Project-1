@@ -1,127 +1,98 @@
 package lp1;
 
+/**
+ * Top level uses sparse table
+ * No any preprocess on block level.
+ */
 public class RMQHybridOne implements RMQStructure {
 
-    protected int block_size;
+	protected int block_size;
 	protected int[] block_minima;
 	protected int[][] sparse_table;
-	
-	public RMQHybridOne() {
-		
-	}
+    RMQSparseTable rmqBlock;
+
+    public RMQHybridOne() {
+    }
+
+    protected double getBlockSize(double value) {
+        return Math.log(value) / Math.log(2);
+    }
+
+    // Used to construct sparse table
+    protected double log2(double value) {
+        return Math.log(value) / Math.log(2);
+    }
 
     @Override
     public void preProcess(int[] arr) {
-        int length = arr.length;
+    	int length = arr.length;
 		block_size = (int)(Math.log(length) / Math.log(2));
 		int no_blocks = (int) Math.ceil((double)(length)/block_size);
 		block_minima = new int[no_blocks];
-		
+
+        // Scan arr to get topArr
 		for(int i = 0, b = 0; i < length; i += block_size, b++) {
 			int min = arr[i];
-			for(int j = 0; j < Math.min(i+block_size, length); j++) {
+			for(int j = i; j < Math.min(i+block_size, length); j++) {
 				min = Math.min(min, arr[j]);
 			}
 			block_minima[b] = min;
 		}
 		
-		// Construct sparse table for block minima
-		sparseTable(block_minima, no_blocks);
+
+        rmqBlock = new RMQSparseTable();
+        rmqBlock.preProcess(block_minima);
+
     }
 
     @Override
-    public int query(int[] arr, int i, int j) {
-        if(i==j) {
-			return arr[i];
-		}
-
+    public int query(int[] arr, int i, int j)  {
         int left_top_index = i/block_size;
 		int right_top_index = j/block_size;
-        int bottom_min = arr[i];
-        int bottom_left_min = arr[i];
-        int bottom_right_min = arr[j];
 
-        boolean flag = false;
-		
-        // Getting bottom min
-        if(i%block_size != 0){
-            bottom_left_min = getLeftBottomMin(arr, i, j);
-            left_top_index += 1;
-            flag = true;
-        }
-
-        if(j%block_size != 0) {
-            bottom_right_min = getRightBottomMin(arr, i, j);
-            right_top_index -= 1;
-            flag = true;
-        }
-
-        if(flag) {
-            bottom_min = Math.min(bottom_left_min, bottom_right_min);
-        }
-
-        if(left_top_index >= right_top_index) {
-            return bottom_min;
-        }
+        // Get block level min left & right
+        int minLeftBlock = getMinLeftBlockLevel(arr, i, left_top_index);
+        int minRightBlock = getMinRightBlockLevel(arr, j, right_top_index);
         
-        // Getting top min
-		int top_min = getTopMin(arr, left_top_index, right_top_index);
-
-		return Math.min(top_min, bottom_min);
-    }
-
-    public void sparseTable(int[] arr, int arr_size) {
-		int rows = arr_size;
-		double log_size = Math.log(arr_size) / Math.log(2);
-		int columns = (int)log_size + 1;
-		
-		sparse_table = new int[rows][columns];
-		
-		// Dynamic programming for building sparse table
-		// Initializing the first column
-		for(int i = 0; i < rows; i++) {
-			sparse_table[i][0] = arr[i];
-		}
-		
-		for(int j = 1; j < columns; j++) {
-			for(int i=0; i < rows; i++) {
-				int interval = (int) (i + Math.pow(2, j-1));
-				if(interval < rows && sparse_table[interval][j-1] != 0) {
-					sparse_table[i][j] = Math.min(sparse_table[i][j-1], sparse_table[interval][j-1]);
-				}
-			}
-		}
-	}
-
-    public int getLeftBottomMin(int[] arr, int startIndex, int endIndex) {
-        int endOfBlock = (int)(startIndex/block_size) * block_size + block_size;
-        int min_value = arr[startIndex];
-
-        for(int i = startIndex; i < Math.min(endOfBlock, endIndex); i++) {
-            min_value = Math.min(min_value, arr[i]);
-        }
-
-        return min_value;
-    }
-
-    public int getRightBottomMin(int[] arr, int startIndex, int endIndex) {
-        int startOfBlock = (int)(endIndex/block_size) * block_size;
-        int min_value = arr[startOfBlock];
-
-        for(int i = Math.min(startIndex, startOfBlock); i <  endIndex; i++) {
-            min_value = Math.min(min_value, arr[i]);
-        }
-
-        return min_value;
-    }
-
-    public int getTopMin(int[] arr, int startIndex, int endIndex) {
-        int i = (int)(Math.log(startIndex-endIndex+1)/Math.log(2));
-
-        int left_min = sparse_table[startIndex][i];
-        int right_min = sparse_table[(int)(endIndex - Math.pow(2, i) + 1)][i];
+        int minimum = Math.min(minLeftBlock, minRightBlock);
         
-        return Math.min(left_min, right_min);
+        if (left_top_index + 1 > right_top_index) {
+        	return minimum;
+        }
+
+        int minTopLevel = getTopLevelMin(arr, left_top_index + 1, right_top_index - 1);
+        
+        minimum = Math.min(minimum, minTopLevel);
+        
+        return minimum;
     }
-	
+
+    // Get the top level minimum of blocks between i and j (exclusive)
+    protected int getTopLevelMin(int[] arr, int i, int j) {
+    	return rmqBlock.query(arr, i, j);
+    }
+
+    // Get the block level minimum of i block
+    protected int getMinLeftBlockLevel(int[] arr, int index, int block_index) {
+    	int end_index = (block_index + 1) * block_size - 1;
+    	int minimum = arr[index];
+    	
+    	for(int i = index; i <= end_index; i++) {
+    		minimum = Math.min(minimum, arr[i]);
+    	}
+    	
+    	return minimum;
+    }
+
+    // Get the block level minimum of j block
+    protected int getMinRightBlockLevel(int[] arr, int index, int block_index) {
+    	int start_index = (block_index) * block_size;
+    	int minimum = arr[start_index];
+    	
+    	for(int i = start_index; i <= index; i++) {
+    		minimum = Math.min(minimum, arr[i]);
+    	}
+    	
+    	return minimum;
+    }
 }
